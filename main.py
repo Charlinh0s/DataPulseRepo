@@ -97,3 +97,38 @@ df['EMA50_H4'] = df['EMA50_H4'].ffill()
 
 df = df.join(df_H1['EMA50_H1'], how='left')
 df['EMA50_H1'] = df['EMA50_H1'].ffill()
+
+# --- Labeling logic applied on M15 resolution ---
+def is_near(price, ema, margin=0.1):
+    return abs(price - ema) / ema <= margin
+
+labels = []
+for i in range(len(df)):
+    row = df.iloc[i]
+
+    if row.isna().any():
+        labels.append("Hold")
+        continue
+
+    near_sma = is_near(row['Close'], row['EMA50_H1'])
+    above_h1 = row['Close'] > row['EMA50_H1']
+    below_h1 = row['Close'] < row['EMA50_H1']
+
+    crossed_up = row['cross_up']
+    crossed_down = row['cross_down']
+
+    if near_sma and above_h1 and crossed_up:
+        labels.append("Buy")
+    elif near_sma and below_h1 and crossed_down:
+        labels.append("Sell")
+    else:
+        labels.append("Hold")
+
+# --- Save labeled data ---
+df['Label'] = labels
+df.to_csv("forex_data/EURUSD_M15.csv")
+
+# Optional preview
+df['Label'].value_counts()
+
+print(df)
